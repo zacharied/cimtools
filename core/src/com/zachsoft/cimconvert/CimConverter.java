@@ -6,8 +6,7 @@ import com.badlogic.gdx.files.FileHandle;
 import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.graphics.Pixmap;
 import com.badlogic.gdx.graphics.PixmapIO;
-import com.badlogic.gdx.graphics.Texture;
-import com.badlogic.gdx.graphics.g2d.SpriteBatch;
+import jdk.internal.jline.internal.Nullable;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -18,7 +17,6 @@ public class CimConverter extends ApplicationAdapter {
 	private List<Path> paths;
 
 	private Pixmap pixmap;
-    private Texture pixmapTexture;
 
     public CimConverter(List<Path> paths) {
 		this.paths = paths;
@@ -35,12 +33,15 @@ public class CimConverter extends ApplicationAdapter {
 			}
 
 		    Path outputPath;
-		    if (path.endsWith(".cim")) {
+		    if (path.toString().endsWith(".cim")) {
 				outputPath = Paths.get(path.toString().replaceAll("\\.cim$", ".png"));
 				convertFromCim(path, outputPath);
-			} else if (path.endsWith(".png")) {
+			} else if (path.toString().endsWith(".png")) {
 				outputPath = Paths.get(path.toString().replaceAll("\\.png$", ".cim"));
 				convertToCim(path, outputPath);
+			} else {
+				System.err.printf("Input file '%s' is not a supported file type; skipping.\n", path);
+				continue;
 			}
 
 			System.out.printf("Converted '%s' to '%s'\n", path, outputPath);
@@ -57,19 +58,26 @@ public class CimConverter extends ApplicationAdapter {
 
 	@Override
 	public void dispose() {
-	    pixmapTexture.dispose();
 	    pixmap.dispose();
 	}
 
 	private void convertFromCim(Path cimPath, Path outputPath) {
 		FileHandle handle = new FileHandle(cimPath.toString());
 		pixmap = PixmapIO.readCIM(handle);
-		pixmapTexture = new Texture(pixmap, Pixmap.Format.RGB888, false);
 
 		FileHandle output = new FileHandle(outputPath.toString());
 		PixmapIO.writePNG(output, pixmap);
 	}
 
-	private void saveCim(String outputPath) {
+	private void convertToCim(Path imagePath, Path outputPath) {
+    	FileHandle handle = new FileHandle(imagePath.toString());
+    	pixmap = new Pixmap(handle);
+
+    	FileHandle output = new FileHandle(outputPath.toString());
+    	PixmapIO.writeCIM(output, pixmap);
+	}
+
+	public enum ConvertDirection {
+    	TO_CIM, FROM_CIM
 	}
 }
