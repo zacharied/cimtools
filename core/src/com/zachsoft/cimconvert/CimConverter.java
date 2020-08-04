@@ -7,11 +7,17 @@ import com.badlogic.gdx.files.FileHandle;
 import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.graphics.Pixmap;
 import com.badlogic.gdx.graphics.PixmapIO;
+import com.badlogic.gdx.graphics.Texture;
+import com.badlogic.gdx.graphics.g2d.Sprite;
+import com.badlogic.gdx.graphics.g2d.SpriteBatch;
+import sun.awt.image.ImageWatched;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.LinkedList;
 import java.util.List;
+import java.util.Stack;
 import java.util.concurrent.CountDownLatch;
 import java.util.function.BiConsumer;
 import java.util.function.BiFunction;
@@ -21,16 +27,24 @@ public class CimConverter extends ApplicationAdapter {
 	private ConvertDirection direction;
 	private boolean doPreview;
 
-	private Pixmap pixmap;
+	private Stack<Texture> previewImages;
+	private SpriteBatch batch;
 
     public CimConverter(List<Path> paths, ConvertDirection direction, boolean doPreview) {
 		this.paths = paths;
 		this.direction = direction;
 		this.doPreview = doPreview;
+
+		if (doPreview) {
+			previewImages = new Stack<>();
+		}
 	}
 
 	@Override
 	public void create() {
+        if (doPreview)
+			batch = new SpriteBatch();
+
 		for (Path path : paths) {
 			if (!Files.exists(path)) {
 				System.err.printf("Input file '%s' not found; skipping.\n", path);
@@ -67,20 +81,33 @@ public class CimConverter extends ApplicationAdapter {
 
 			FileHandle sourceHandle = new FileHandle(path.toString());
 			FileHandle outputHandle = new FileHandle(outputPath.toString());
-			pixmap = fileDirection.converter.apply(sourceHandle, outputHandle);
+			Pixmap pixmap = fileDirection.converter.apply(sourceHandle, outputHandle);
+
+			if (doPreview)
+				previewImages.push(new Texture(pixmap));
 
 			System.out.printf("Converted '%s' to '%s'\n", path, outputPath);
 		}
 
-		System.exit(0);
+		if (!doPreview)
+			System.exit(0);
 	}
 
 	@Override
 	public void render() {
 		Gdx.gl.glClearColor(1, 0, 0, 1);
 		Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
-	}
 
+		batch.begin();
+		batch.draw(previewImages.peek(), 0, 0);
+		batch.end();
+
+		if (Gdx.input.isKeyJustPressed(Input.Keys.SPACE))
+			previewImages.pop();
+
+		if (previewImages.empty())
+			System.exit(0);
+	}
 
 	public enum ConvertDirection {
     	TO_CIM("png", "cim", (source, output) -> {
