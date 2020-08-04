@@ -61,6 +61,6 @@ public class DesktopLauncher {
 				null;
 
 		LwjglApplicationConfiguration config = new LwjglApplicationConfiguration();
-		new LwjglApplication(new CimConverter(paths, direction), config);
+		new LwjglApplication(new CimConverter(paths, direction, result.hasMatchedOption('p')), config);
 	}
 }

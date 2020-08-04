@@ -2,6 +2,7 @@ package com.zachsoft.cimconvert;
 
 import com.badlogic.gdx.ApplicationAdapter;
 import com.badlogic.gdx.Gdx;
+import com.badlogic.gdx.Input;
 import com.badlogic.gdx.files.FileHandle;
 import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.graphics.Pixmap;
@@ -11,32 +12,38 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.List;
+import java.util.concurrent.CountDownLatch;
 import java.util.function.BiConsumer;
+import java.util.function.BiFunction;
 
 public class CimConverter extends ApplicationAdapter {
 	private List<Path> paths;
 	private ConvertDirection direction;
+	private boolean doPreview;
 
-    public CimConverter(List<Path> paths, ConvertDirection direction) {
+	private Pixmap pixmap;
+
+    public CimConverter(List<Path> paths, ConvertDirection direction, boolean doPreview) {
 		this.paths = paths;
 		this.direction = direction;
+		this.doPreview = doPreview;
 	}
 
 	@Override
 	public void create() {
 		for (Path path : paths) {
-		    if (!Files.exists(path)) {
+			if (!Files.exists(path)) {
 				System.err.printf("Input file '%s' not found; skipping.\n", path);
-				continue;
+				return;
 			}
 
-		    // Try to determine conversion direction.
-		    ConvertDirection fileDirection = this.direction;
-		    boolean directionForced = true;
-		    if (fileDirection == null) {
-		    	// No direction flag provided.
-		    	for (ConvertDirection dir : ConvertDirection.values())
-		    		if (path.toString().endsWith("." + dir.sourceExtension))
+			// Try to determine conversion direction.
+			ConvertDirection fileDirection = CimConverter.this.direction;
+			boolean directionForced = true;
+			if (fileDirection == null) {
+				// No direction flag provided.
+				for (ConvertDirection dir : ConvertDirection.values())
+					if (path.toString().endsWith("." + dir.sourceExtension))
 						fileDirection = dir;
 				directionForced = false;
 			}
@@ -45,12 +52,12 @@ public class CimConverter extends ApplicationAdapter {
 				// Couldn't determine which way to convert.
 				System.err.printf("Cannot determine file type for '%s' and no direction flag specified; skipping.\n",
 						path);
-				continue;
+				return;
 			}
 
 			Path outputPath;
 			if (!directionForced) {
-			    // We determined the filetype from its extension, so replace that extension with the output filetype's.
+				// We determined the filetype from its extension, so replace that extension with the output filetype's.
 				outputPath = Paths.get(path.toString().replaceAll(
 						"\\." + fileDirection.sourceExtension, "." + fileDirection.outputExtension));
 			} else {
@@ -58,7 +65,9 @@ public class CimConverter extends ApplicationAdapter {
 				outputPath = Paths.get(path.toString() + "." + fileDirection.outputExtension);
 			}
 
-			fileDirection.converter.accept(path, outputPath);
+			FileHandle sourceHandle = new FileHandle(path.toString());
+			FileHandle outputHandle = new FileHandle(outputPath.toString());
+			pixmap = fileDirection.converter.apply(sourceHandle, outputHandle);
 
 			System.out.printf("Converted '%s' to '%s'\n", path, outputPath);
 		}
@@ -72,29 +81,23 @@ public class CimConverter extends ApplicationAdapter {
 		Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
 	}
 
-	private static void convertFromCim(Path cimPath, Path outputPath) {
-		FileHandle handle = new FileHandle(cimPath.toString());
-		Pixmap pixmap = PixmapIO.readCIM(handle);
-
-		FileHandle output = new FileHandle(outputPath.toString());
-		PixmapIO.writePNG(output, pixmap);
-	}
-
-	private static void convertToCim(Path imagePath, Path outputPath) {
-    	FileHandle handle = new FileHandle(imagePath.toString());
-    	Pixmap pixmap = new Pixmap(handle);
-
-    	FileHandle output = new FileHandle(outputPath.toString());
-    	PixmapIO.writeCIM(output, pixmap);
-	}
 
 	public enum ConvertDirection {
-    	TO_CIM("png", "cim", CimConverter::convertToCim),
-		FROM_CIM("cim", "png", CimConverter::convertFromCim);
+    	TO_CIM("png", "cim", (source, output) -> {
+			Pixmap pixmap = new Pixmap(source);
+			PixmapIO.writeCIM(output, pixmap);
+			return pixmap;
+		}),
+
+		FROM_CIM("cim", "png", (source, output) -> {
+			Pixmap pixmap = PixmapIO.readCIM(source);
+			PixmapIO.writePNG(output, pixmap);
+			return pixmap;
+		});
 
     	private final String sourceExtension, outputExtension;
-    	final BiConsumer<Path, Path> converter;
-    	ConvertDirection(String sourceExtension, String outputExtension, BiConsumer<Path, Path> converter) {
+    	final BiFunction<FileHandle, FileHandle, Pixmap> converter;
+    	ConvertDirection(String sourceExtension, String outputExtension, BiFunction<FileHandle, FileHandle, Pixmap> converter) {
     	    this.sourceExtension = sourceExtension;
     	    this.outputExtension = outputExtension;
     	    this.converter = converter;
