@@ -6,43 +6,59 @@ import com.badlogic.gdx.files.FileHandle;
 import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.graphics.Pixmap;
 import com.badlogic.gdx.graphics.PixmapIO;
-import jdk.internal.jline.internal.Nullable;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.List;
+import java.util.function.BiConsumer;
 
 public class CimConverter extends ApplicationAdapter {
 	private List<Path> paths;
+	private ConvertDirection direction;
 
-	private Pixmap pixmap;
-
-    public CimConverter(List<Path> paths) {
+    public CimConverter(List<Path> paths, ConvertDirection direction) {
 		this.paths = paths;
+		this.direction = direction;
 	}
 
 	@Override
 	public void create() {
-		System.out.println("Created.");
-
 		for (Path path : paths) {
 		    if (!Files.exists(path)) {
 				System.err.printf("Input file '%s' not found; skipping.\n", path);
 				continue;
 			}
 
-		    Path outputPath;
-		    if (path.toString().endsWith(".cim")) {
-				outputPath = Paths.get(path.toString().replaceAll("\\.cim$", ".png"));
-				convertFromCim(path, outputPath);
-			} else if (path.toString().endsWith(".png")) {
-				outputPath = Paths.get(path.toString().replaceAll("\\.png$", ".cim"));
-				convertToCim(path, outputPath);
-			} else {
-				System.err.printf("Input file '%s' is not a supported file type; skipping.\n", path);
+		    // Try to determine conversion direction.
+		    ConvertDirection fileDirection = this.direction;
+		    boolean directionForced = true;
+		    if (fileDirection == null) {
+		    	// No direction flag provided.
+		    	for (ConvertDirection dir : ConvertDirection.values())
+		    		if (path.toString().endsWith("." + dir.sourceExtension))
+						fileDirection = dir;
+				directionForced = false;
+			}
+
+			if (fileDirection == null) {
+				// Couldn't determine which way to convert.
+				System.err.printf("Cannot determine file type for '%s' and no direction flag specified; skipping.\n",
+						path);
 				continue;
 			}
+
+			Path outputPath;
+			if (!directionForced) {
+			    // We determined the filetype from its extension, so replace that extension with the output filetype's.
+				outputPath = Paths.get(path.toString().replaceAll(
+						"\\." + fileDirection.sourceExtension, "." + fileDirection.outputExtension));
+			} else {
+				// The conversion direction is forced, so just slap the new extension on the end.
+				outputPath = Paths.get(path.toString() + "." + fileDirection.outputExtension);
+			}
+
+			fileDirection.converter.accept(path, outputPath);
 
 			System.out.printf("Converted '%s' to '%s'\n", path, outputPath);
 		}
@@ -56,28 +72,32 @@ public class CimConverter extends ApplicationAdapter {
 		Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
 	}
 
-	@Override
-	public void dispose() {
-	    pixmap.dispose();
-	}
-
-	private void convertFromCim(Path cimPath, Path outputPath) {
+	private static void convertFromCim(Path cimPath, Path outputPath) {
 		FileHandle handle = new FileHandle(cimPath.toString());
-		pixmap = PixmapIO.readCIM(handle);
+		Pixmap pixmap = PixmapIO.readCIM(handle);
 
 		FileHandle output = new FileHandle(outputPath.toString());
 		PixmapIO.writePNG(output, pixmap);
 	}
 
-	private void convertToCim(Path imagePath, Path outputPath) {
+	private static void convertToCim(Path imagePath, Path outputPath) {
     	FileHandle handle = new FileHandle(imagePath.toString());
-    	pixmap = new Pixmap(handle);
+    	Pixmap pixmap = new Pixmap(handle);
 
     	FileHandle output = new FileHandle(outputPath.toString());
     	PixmapIO.writeCIM(output, pixmap);
 	}
 
 	public enum ConvertDirection {
-    	TO_CIM, FROM_CIM
+    	TO_CIM("png", "cim", CimConverter::convertToCim),
+		FROM_CIM("cim", "png", CimConverter::convertFromCim);
+
+    	private final String sourceExtension, outputExtension;
+    	final BiConsumer<Path, Path> converter;
+    	ConvertDirection(String sourceExtension, String outputExtension, BiConsumer<Path, Path> converter) {
+    	    this.sourceExtension = sourceExtension;
+    	    this.outputExtension = outputExtension;
+    	    this.converter = converter;
+		}
 	}
 }
