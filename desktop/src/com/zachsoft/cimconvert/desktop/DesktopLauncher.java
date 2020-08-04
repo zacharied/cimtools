@@ -2,15 +2,11 @@ package com.zachsoft.cimconvert.desktop;
 
 import com.badlogic.gdx.backends.lwjgl.LwjglApplication;
 import com.badlogic.gdx.backends.lwjgl.LwjglApplicationConfiguration;
-import com.sun.tools.javac.util.Convert;
 import com.zachsoft.cimconvert.CimConverter;
 import picocli.CommandLine;
-import sun.awt.image.ImageWatched;
 
 import java.nio.file.Path;
-import java.util.LinkedList;
 import java.util.List;
-import java.util.concurrent.Callable;
 
 @CommandLine.Command(
 		name = "cimtools",
@@ -20,7 +16,7 @@ public class DesktopLauncher {
 	@CommandLine.Option(names = {"-h", "--help"}, usageHelp = true, description = "Display this and exit.")
     private boolean doHelp;
 
-	static class ConvertDirectionOption {
+	private static class ConvertDirectionOption {
 		@CommandLine.Option(
 				names = {"-t", "--to-cim"},
 				description = "Force input file(s) to be treated as an image, converting them to a CIM.")
@@ -59,7 +55,12 @@ public class DesktopLauncher {
 
 		List<Path> paths = result.matchedPositional(0).getValue();
 
+		CimConverter.ConvertDirection direction =
+				result.hasMatchedOption('t') ? CimConverter.ConvertDirection.TO_CIM :
+				result.hasMatchedOption('f') ? CimConverter.ConvertDirection.FROM_CIM :
+				null;
+
 		LwjglApplicationConfiguration config = new LwjglApplicationConfiguration();
-		new LwjglApplication(new CimConverter(paths), config);
+		new LwjglApplication(new CimConverter(paths, direction), config);
 	}
 }
