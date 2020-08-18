@@ -48,7 +48,7 @@ public class CimConverter extends ApplicationAdapter {
 		for (Path path : paths) {
 			if (!Files.exists(path)) {
 				System.err.printf("Input file '%s' not found; skipping.\n", path);
-				return;
+				continue;
 			}
 
 			// Try to determine conversion direction.
@@ -98,15 +98,16 @@ public class CimConverter extends ApplicationAdapter {
 		Gdx.gl.glClearColor(1, 0, 0, 1);
 		Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
 
-		batch.begin();
-		batch.draw(previewImages.peek(), 0, 0);
-		batch.end();
+		if (!previewImages.empty()) {
+			batch.begin();
+			batch.draw(previewImages.peek(), 0, 0);
+			batch.end();
 
-		if (Gdx.input.isKeyJustPressed(Input.Keys.SPACE))
-			previewImages.pop();
-
-		if (previewImages.empty())
+			if (Gdx.input.isKeyJustPressed(Input.Keys.SPACE))
+				previewImages.pop();
+		} else {
 			System.exit(0);
+		}
 	}
 
 	public enum ConvertDirection {
