@@ -8,12 +8,13 @@ import picocli.CommandLine;
 import java.nio.file.Path;
 import java.util.List;
 
+@SuppressWarnings("unused")
 @CommandLine.Command(
         name = "cimtools",
         footer = "If neither `-t` nor `-f` are given, the extension of the file will be used to decide which " +
                 "direction to convert in.")
 public class DesktopLauncher {
-    @CommandLine.ArgGroup(exclusive = true)
+    @CommandLine.ArgGroup()
     private ConvertDirectionOption conversionDirection;
 
     @CommandLine.Option(names = {"-h", "--help"}, usageHelp = true, description = "Display this and exit.")
@@ -27,7 +28,6 @@ public class DesktopLauncher {
 
     public static void main(String[] args) {
         // Parse arguments.
-        System.out.println("Starting...");
         CommandLine.ParseResult result = new CommandLine(new DesktopLauncher()).parseArgs(args);
 
         // Show help if necessary.
