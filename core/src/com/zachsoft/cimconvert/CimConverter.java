@@ -8,126 +8,122 @@ import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.graphics.Pixmap;
 import com.badlogic.gdx.graphics.PixmapIO;
 import com.badlogic.gdx.graphics.Texture;
-import com.badlogic.gdx.graphics.g2d.Sprite;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
-import sun.awt.image.ImageWatched;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Stack;
-import java.util.concurrent.CountDownLatch;
-import java.util.function.BiConsumer;
 import java.util.function.BiFunction;
 
 public class CimConverter extends ApplicationAdapter {
-	private List<Path> paths;
-	private ConvertDirection direction;
-	private boolean doPreview;
+    private List<Path> paths;
+    private ConvertDirection direction;
+    private boolean doPreview;
 
-	private Stack<Texture> previewImages;
-	private SpriteBatch batch;
+    private Stack<Texture> previewImages;
+    private SpriteBatch batch;
 
     public CimConverter(List<Path> paths, ConvertDirection direction, boolean doPreview) {
-		this.paths = paths;
-		this.direction = direction;
-		this.doPreview = doPreview;
+        this.paths = paths;
+        this.direction = direction;
+        this.doPreview = doPreview;
 
-		if (doPreview)
-			previewImages = new Stack<>();
-	}
-
-	@Override
-	public void create() {
         if (doPreview)
-			batch = new SpriteBatch();
+            previewImages = new Stack<>();
+    }
 
-		for (Path path : paths) {
-			if (!Files.exists(path)) {
-				System.err.printf("Input file '%s' not found; skipping.\n", path);
-				continue;
-			}
+    @Override
+    public void create() {
+        if (doPreview)
+            batch = new SpriteBatch();
 
-			// Try to determine conversion direction.
-			ConvertDirection fileDirection = this.direction;
-			boolean directionForced = true;
-			if (fileDirection == null) {
-				// No direction flag provided.
-				for (ConvertDirection dir : ConvertDirection.values())
-					if (path.toString().endsWith("." + dir.sourceExtension))
-						fileDirection = dir;
-				directionForced = false;
-			}
+        for (Path path : paths) {
+            if (!Files.exists(path)) {
+                System.err.printf("Input file '%s' not found; skipping.\n", path);
+                continue;
+            }
 
-			if (fileDirection == null) {
-				// Couldn't determine which way to convert.
-				System.err.printf("Cannot determine file type for '%s' and no direction flag specified; skipping.\n",
-						path);
-				return;
-			}
+            // Try to determine conversion direction.
+            ConvertDirection fileDirection = this.direction;
+            boolean directionForced = true;
+            if (fileDirection == null) {
+                // No direction flag provided.
+                for (ConvertDirection dir : ConvertDirection.values())
+                    if (path.toString().endsWith("." + dir.sourceExtension))
+                        fileDirection = dir;
+                directionForced = false;
+            }
 
-			Path outputPath;
-			if (!directionForced) {
-				// We determined the filetype from its extension, so replace that extension with the output filetype's.
-				outputPath = Paths.get(path.toString().replaceAll(
-						"\\." + fileDirection.sourceExtension, "." + fileDirection.outputExtension));
-			} else {
-				// The conversion direction is forced, so just slap the new extension on the end.
-				outputPath = Paths.get(path.toString() + "." + fileDirection.outputExtension);
-			}
+            if (fileDirection == null) {
+                // Couldn't determine which way to convert.
+                System.err.printf("Cannot determine file type for '%s' and no direction flag specified; skipping.\n",
+                        path);
+                return;
+            }
 
-			FileHandle sourceHandle = new FileHandle(path.toString()),
-			           outputHandle = new FileHandle(outputPath.toString());
-			Pixmap pixmap = fileDirection.converter.apply(sourceHandle, outputHandle);
+            Path outputPath;
+            if (!directionForced) {
+                // We determined the filetype from its extension, so replace that extension with the output filetype's.
+                outputPath = Paths.get(path.toString().replaceAll(
+                        "\\." + fileDirection.sourceExtension, "." + fileDirection.outputExtension));
+            } else {
+                // The conversion direction is forced, so just slap the new extension on the end.
+                outputPath = Paths.get(path.toString() + "." + fileDirection.outputExtension);
+            }
 
-			if (doPreview)
-				previewImages.push(new Texture(pixmap));
+            FileHandle sourceHandle = new FileHandle(path.toString()),
+                    outputHandle = new FileHandle(outputPath.toString());
+            Pixmap pixmap = fileDirection.converter.apply(sourceHandle, outputHandle);
 
-			System.out.printf("Converted '%s' to '%s'\n", path, outputPath);
-		}
+            if (doPreview)
+                previewImages.push(new Texture(pixmap));
 
-		if (!doPreview)
-			Gdx.app.exit();
-	}
+            System.out.printf("Converted '%s' to '%s'\n", path, outputPath);
+        }
 
-	@Override
-	public void render() {
-		Gdx.gl.glClearColor(0, 0, 0, 1);
-		Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
+        if (!doPreview)
+            Gdx.app.exit();
+    }
 
-		if (!previewImages.empty()) {
-			batch.begin();
-			batch.draw(previewImages.peek(), 0, 0);
-			batch.end();
+    @Override
+    public void render() {
+        Gdx.gl.glClearColor(0, 0, 0, 1);
+        Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
 
-			if (Gdx.input.isKeyJustPressed(Input.Keys.SPACE))
-				previewImages.pop();
-		} else {
-			Gdx.app.exit();
-		}
-	}
+        if (!previewImages.empty()) {
+            batch.begin();
+            batch.draw(previewImages.peek(), 0, 0);
+            batch.end();
 
-	public enum ConvertDirection {
-    	TO_CIM("png", "cim", (source, output) -> {
-			Pixmap pixmap = new Pixmap(source);
-			PixmapIO.writeCIM(output, pixmap);
-			return pixmap;
-		}),
+            if (Gdx.input.isKeyJustPressed(Input.Keys.SPACE))
+                previewImages.pop();
+        } else {
+            Gdx.app.exit();
+        }
+    }
 
-		FROM_CIM("cim", "png", (source, output) -> {
-			Pixmap pixmap = PixmapIO.readCIM(source);
-			PixmapIO.writePNG(output, pixmap);
-			return pixmap;
-		});
+    public enum ConvertDirection {
+        TO_CIM("png", "cim", (source, output) -> {
+            Pixmap pixmap = new Pixmap(source);
+            PixmapIO.writeCIM(output, pixmap);
+            return pixmap;
+        }),
 
-    	private final String sourceExtension, outputExtension;
-    	final BiFunction<FileHandle, FileHandle, Pixmap> converter;
-    	ConvertDirection(String sourceExtension, String outputExtension, BiFunction<FileHandle, FileHandle, Pixmap> converter) {
-    	    this.sourceExtension = sourceExtension;
-    	    this.outputExtension = outputExtension;
-    	    this.converter = converter;
-		}
-	}
+        FROM_CIM("cim", "png", (source, output) -> {
+            Pixmap pixmap = PixmapIO.readCIM(source);
+            PixmapIO.writePNG(output, pixmap);
+            return pixmap;
+        });
+
+        private final BiFunction<FileHandle, FileHandle, Pixmap> converter;
+        private final String sourceExtension, outputExtension;
+
+        ConvertDirection(String sourceExtension, String outputExtension, BiFunction<FileHandle, FileHandle, Pixmap> converter) {
+            this.sourceExtension = sourceExtension;
+            this.outputExtension = outputExtension;
+            this.converter = converter;
+        }
+    }
 }
