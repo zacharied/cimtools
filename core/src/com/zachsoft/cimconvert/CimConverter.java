@@ -35,9 +35,8 @@ public class CimConverter extends ApplicationAdapter {
 		this.direction = direction;
 		this.doPreview = doPreview;
 
-		if (doPreview) {
+		if (doPreview)
 			previewImages = new Stack<>();
-		}
 	}
 
 	@Override
@@ -52,7 +51,7 @@ public class CimConverter extends ApplicationAdapter {
 			}
 
 			// Try to determine conversion direction.
-			ConvertDirection fileDirection = CimConverter.this.direction;
+			ConvertDirection fileDirection = this.direction;
 			boolean directionForced = true;
 			if (fileDirection == null) {
 				// No direction flag provided.
@@ -79,8 +78,8 @@ public class CimConverter extends ApplicationAdapter {
 				outputPath = Paths.get(path.toString() + "." + fileDirection.outputExtension);
 			}
 
-			FileHandle sourceHandle = new FileHandle(path.toString());
-			FileHandle outputHandle = new FileHandle(outputPath.toString());
+			FileHandle sourceHandle = new FileHandle(path.toString()),
+			           outputHandle = new FileHandle(outputPath.toString());
 			Pixmap pixmap = fileDirection.converter.apply(sourceHandle, outputHandle);
 
 			if (doPreview)
@@ -90,12 +89,12 @@ public class CimConverter extends ApplicationAdapter {
 		}
 
 		if (!doPreview)
-			System.exit(0);
+			Gdx.app.exit();
 	}
 
 	@Override
 	public void render() {
-		Gdx.gl.glClearColor(1, 0, 0, 1);
+		Gdx.gl.glClearColor(0, 0, 0, 1);
 		Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
 
 		if (!previewImages.empty()) {
@@ -106,7 +105,7 @@ public class CimConverter extends ApplicationAdapter {
 			if (Gdx.input.isKeyJustPressed(Input.Keys.SPACE))
 				previewImages.pop();
 		} else {
-			System.exit(0);
+			Gdx.app.exit();
 		}
 	}
 

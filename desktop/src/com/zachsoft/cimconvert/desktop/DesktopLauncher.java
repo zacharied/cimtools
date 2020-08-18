@@ -1,7 +1,7 @@
 package com.zachsoft.cimconvert.desktop;
 
-import com.badlogic.gdx.backends.lwjgl.LwjglApplication;
-import com.badlogic.gdx.backends.lwjgl.LwjglApplicationConfiguration;
+import com.badlogic.gdx.backends.lwjgl3.Lwjgl3Application;
+import com.badlogic.gdx.backends.lwjgl3.Lwjgl3ApplicationConfiguration;
 import com.zachsoft.cimconvert.CimConverter;
 import picocli.CommandLine;
 
@@ -60,7 +60,7 @@ public class DesktopLauncher {
 				result.hasMatchedOption('f') ? CimConverter.ConvertDirection.FROM_CIM :
 				null;
 
-		LwjglApplicationConfiguration config = new LwjglApplicationConfiguration();
-		new LwjglApplication(new CimConverter(paths, direction, result.hasMatchedOption('p')), config);
+		Lwjgl3ApplicationConfiguration config = new Lwjgl3ApplicationConfiguration();
+		new Lwjgl3Application(new CimConverter(paths, direction, result.hasMatchedOption('p')), config);
 	}
 }
