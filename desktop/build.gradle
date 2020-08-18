@@ -13,6 +13,7 @@ project.ext.assetsDir = new File("../core/assets")
 launch4j {
     mainClassName = "com.zachsoft.cimconvert.desktop.DesktopLauncher"
     headerType = "console"
+    outfile = "cimtools-v${version}.exe"
 }
 
 task run(dependsOn: classes, type: JavaExec) {
