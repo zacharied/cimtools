@@ -1,4 +1,7 @@
-apply plugin: "java"
+plugins {
+    id "java"
+    id "edu.sc.seis.launch4j" version "2.4.6"
+}
 
 sourceCompatibility = 1.8
 sourceSets.main.java.srcDirs = [ "src/" ]
@@ -6,6 +9,11 @@ sourceSets.main.resources.srcDirs = ["../core/assets"]
 
 project.ext.mainClassName = "com.zachsoft.cimconvert.desktop.DesktopLauncher"
 project.ext.assetsDir = new File("../core/assets")
+
+launch4j {
+    mainClassName = "com.zachsoft.cimconvert.desktop.DesktopLauncher"
+    headerType = "console"
+}
 
 task run(dependsOn: classes, type: JavaExec) {
     main = project.mainClassName
@@ -34,7 +42,6 @@ task dist(type: Jar) {
     }
     with jar
 }
-
 
 dist.dependsOn classes
 
