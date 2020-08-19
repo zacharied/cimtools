@@ -7,6 +7,9 @@ Convert to and from LR2 CIM skin image files.
 A CIM file is just a LibGDX pixmap, dumped to a file. This tool simply opens the given file, loads it with LibGDX, and
 writes the data of that image to the appropriate file format.
 
+The JAR for this application, along with a Windows executable is available in on the [Releases](https://github.com/zacharied/cimtools/releases)
+page. Note that a JRE ≥ 1.8 is required to run the program through either of these methods.
+
 ## Usage
 
 `cimtools [<file> ...]` where `<file>` is a file of type CIM or PNG.
