@@ -14,6 +14,7 @@ launch4j {
     mainClassName = "com.zachsoft.cimconvert.desktop.DesktopLauncher"
     headerType = "console"
     outfile = "cimtools-v${version}.exe"
+    classpath = configurations.runtimeClasspath.getFiles()
 }
 
 task run(dependsOn: classes, type: JavaExec) {
